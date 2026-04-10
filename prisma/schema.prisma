@@ -6,3 +6,32 @@ generator client {
 datasource db {
   provider = "mysql"
 }
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+
+  avatar        String?  // nullable
+  city          String?
+  bio           String?
+  phone         String?
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  roleId        String
+  role          Role     @relation(fields: [roleId], references: [id])
+
+  @@map("users")
+}
+
+model Role {
+  id    String @id @default(uuid())
+  name  String @unique
+
+  users User[]
+
+  @@map("roles")
+}
