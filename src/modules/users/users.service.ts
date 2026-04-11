@@ -1,131 +1,65 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dto';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CreateUserInput } from './schemas/create-user.schema';
+import { UpdateUserInput } from './schemas/update-user.schema';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    const passwordHash = await bcrypt.hash(createUserDto.password, 10);
+  async findOne(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { role: true },
+    });
+
+    if (!user) throw new NotFoundException();
+
+    return this.sanitize(user);
+  }
+
+  async findAll() {
+    const users = await this.prisma.user.findMany({
+      include: { role: true },
+    });
+
+    return users.map((user) => this.sanitize(user));
+  }
+
+  async create(data: CreateUserInput) {
+    const passwordHash = await bcrypt.hash(data.password, 10);
 
     const user = await this.prisma.user.create({
       data: {
-        ...createUserDto,
+        email: data.email,
         passwordHash,
+        name: data.name,
+        avatar: data.avatar,
+        city: data.city,
+        bio: data.bio,
+        phone: data.phone,
+        roleId: data.roleId,
       },
-      include: {
-        role: true,
-      },
+      include: { role: true },
     });
 
-    return this.mapToResponseDto(user);
+    return this.sanitize(user);
   }
 
-  async findAll(): Promise<UserResponseDto[]> {
-    const users = await this.prisma.user.findMany({
-      include: {
-        role: true,
-      },
-    });
-
-    return users.map((user) => this.mapToResponseDto(user));
-  }
-
-  async findOne(id: string): Promise<UserResponseDto> {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        role: true,
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-
-    return this.mapToResponseDto(user);
-  }
-
-  async findByEmail(email: string): Promise<UserResponseDto> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: {
-        role: true,
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
-    }
-
-    return this.mapToResponseDto(user);
-  }
-
-  async update(
-    id: string,
-    updateUserDto: UpdateUserDto,
-  ): Promise<UserResponseDto> {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { id },
-    });
-
-    if (!existingUser) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-
+  async update(data: UpdateUserInput) {
     const user = await this.prisma.user.update({
-      where: { id },
-      data: updateUserDto,
-      include: {
-        role: true,
-      },
+      where: { id: (data as any).id },
+      data,
+      include: { role: true },
     });
 
-    return this.mapToResponseDto(user);
+    return this.sanitize(user);
   }
 
-  async remove(id: string): Promise<void> {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { id },
-    });
-
-    if (!existingUser) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-
-    await this.prisma.user.delete({
-      where: { id },
-    });
-  }
-
-  async validateUser(
-    email: string,
-    password: string,
-  ): Promise<UserResponseDto | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: {
-        role: true,
-      },
-    });
-
-    if (!user) {
-      return null;
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) {
-      return null;
-    }
-
-    return this.mapToResponseDto(user);
-  }
-
-  private mapToResponseDto(user: any): UserResponseDto {
-    const userCopy = { ...user };
-    delete userCopy.passwordHash;
-    return userCopy as UserResponseDto;
+  private sanitize(user: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...rest } = user;
+    return rest;
   }
 }

@@ -3,16 +3,21 @@ generator client {
   output   = "../generated/prisma"
 }
 
+generator zod {
+  provider = "prisma-zod-generator"
+  output   = "../generated/zod"
+}
+
 datasource db {
   provider = "mysql"
 }
 
 model User {
   id            String   @id @default(uuid())
-  name          String
   email         String   @unique
   passwordHash  String   @map("password_hash")
 
+  name          String?
   avatar        String?
   city          String?
   bio           String?
