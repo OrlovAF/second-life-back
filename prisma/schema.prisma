@@ -13,7 +13,7 @@ model User {
   email         String   @unique
   passwordHash  String   @map("password_hash")
 
-  avatar        String?  // nullable
+  avatar        String?
   city          String?
   bio           String?
   phone         String?
