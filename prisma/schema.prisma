@@ -8,7 +8,7 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
+  id            String   @id @default(cuid())
   email         String   @unique
   passwordHash  String   @map("password_hash")
 
@@ -28,7 +28,7 @@ model User {
 }
 
 model Role {
-  id    String @id @default(uuid())
+  id    String @id @default(cuid())
   name  String @unique
 
   users User[]
