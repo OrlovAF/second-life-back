@@ -41,7 +41,7 @@ export const UpdateUserSchema = UserSchema.omit({
   role: true,
   createdAt: true,
   updatedAt: true,
-});
+}).partial();
 
 export class UserDto extends createZodDto(UserSchema) {}
 export class UserResponseDto extends createZodDto(UserResponseSchema) {}

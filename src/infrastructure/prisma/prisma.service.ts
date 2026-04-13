@@ -9,7 +9,7 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor(private configService: ConfigService) {
-    const databaseUrl = configService.get<string>('DATABASE_URL');
+    const databaseUrl = configService.get<string>('db.url');
     if (!databaseUrl) {
       throw new Error('DATABASE_URL is not defined in configuration');
     }

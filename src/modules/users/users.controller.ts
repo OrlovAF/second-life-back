@@ -5,7 +5,7 @@ import {
   Get,
   NotFoundException,
   Param,
-  Put,
+  Patch,
   UseGuards,
 } from '@nestjs/common';
 import { UpdateUserDto } from './users.schema';
@@ -26,7 +26,7 @@ export class UsersController {
     return user;
   }
 
-  @Put(':id')
+  @Patch(':id')
   @UseGuards(OwnResourceGuard)
   async updateUser(@Param('id') id: string, @Body() data: UpdateUserDto) {
     return this.usersService.updateUser(id, data);

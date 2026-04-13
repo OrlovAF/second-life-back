@@ -13,9 +13,25 @@ services:
       - db-data:/var/lib/mysql
     networks:
       - app-network
+  minio:
+    image: minio/minio:RELEASE.2023-10-07T15-07-38Z
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_SERVER_URL: ${S3_ENDPOINT}
+    ports:
+      - ${MINIO_API_PORT}:9000
+      - ${MINIO_CONSOLE_PORT}:9001
+    volumes:
+      - minio_data:/data
+    command: server --console-address ":9001" /data
+    networks:
+      - app-network
 
 volumes:
   db-data:
+  minio_data:
 
 networks:
   app-network:
