@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { CreateUserDto, UserDto, UserResponseDto } from './users.schema';
+import { UserWhereUniqueInput } from './users.types';
 
 @Injectable()
 export class UsersService {
@@ -22,9 +23,12 @@ export class UsersService {
     return this.sanitize(user);
   }
 
-  async findByEmail(email: string) {
+  async findUser(
+    where: UserWhereUniqueInput,
+    withPassword: boolean = false,
+  ): Promise<UserDto | UserResponseDto | null> {
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where,
       include: { role: true },
     });
 
@@ -32,7 +36,7 @@ export class UsersService {
       return null;
     }
 
-    return this.sanitize(user);
+    return withPassword ? user : this.sanitize(user);
   }
 
   private sanitize(user: UserDto): UserResponseDto {
