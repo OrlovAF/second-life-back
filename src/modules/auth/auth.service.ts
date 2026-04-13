@@ -8,7 +8,6 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { RolesService } from '../roles/roles.service';
-import { UserDto } from '../users/users.schema';
 import { UsersService } from '../users/users.service';
 import { CredentialsDto } from './auth.schema';
 
@@ -45,7 +44,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      role: Role.USER,
+      role: user.role.name as Role,
     };
 
     const token = this.jwtService.sign(payload);
@@ -54,10 +53,9 @@ export class AuthService {
   }
 
   async login(credentials: CredentialsDto) {
-    const userWithPassword = (await this.usersService.findUser(
-      { email: credentials.email },
-      true,
-    )) as UserDto;
+    const userWithPassword = await this.usersService.findUserWithPassword({
+      email: credentials.email,
+    });
 
     if (!userWithPassword) {
       throw new UnauthorizedException('Invalid credentials');
