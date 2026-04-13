@@ -1,7 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -11,7 +10,6 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') ?? 3000;
 
   app.setGlobalPrefix('api');
-  app.useGlobalPipes(new ZodValidationPipe());
 
   await app.listen(port);
 }

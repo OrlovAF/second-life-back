@@ -1,11 +1,5 @@
 export enum Role {
-  USER = 'user',
-}
-
-export interface UserPayload {
-  id: string;
-  email: string;
-  role: string;
+  USER = 'USER',
 }
 
 export interface JwtPayload {
