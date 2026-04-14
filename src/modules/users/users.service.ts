@@ -81,7 +81,7 @@ export class UsersService {
       expiresIn: 60,
     });
 
-    return uploadUrl;
+    return { uploadUrl };
   }
 
   private sanitize(user: UserDto): UserResponseDto {
