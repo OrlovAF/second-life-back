@@ -1,7 +1,9 @@
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { S3Service } from '@infrastructure/s3/s3.service';
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import {
+  AvatarUploadDto,
   CreateUserDto,
   UpdateUserDto,
   UserDto,
@@ -11,7 +13,10 @@ import { UserWhereUniqueInput } from './users.types';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private s3: S3Service,
+  ) {}
 
   async create(data: CreateUserDto) {
     const passwordHash = await bcrypt.hash(data.password, 10);
@@ -64,6 +69,19 @@ export class UsersService {
     });
 
     return this.sanitize(user);
+  }
+
+  async getAvatarUploadUrl(userId: string, data: AvatarUploadDto) {
+    const key = `${userId}/avatar.jpg`;
+
+    const uploadUrl = await this.s3.createPresignedPutUrl({
+      key,
+      contentType: data.contentType,
+      checksum: data.checksum,
+      expiresIn: 60,
+    });
+
+    return uploadUrl;
   }
 
   private sanitize(user: UserDto): UserResponseDto {

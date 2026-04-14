@@ -1,11 +1,11 @@
 import { JwtPayload, Role } from '@common/types';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
 import {
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '@prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { RolesService } from '../roles/roles.service';
 import { UsersService } from '../users/users.service';

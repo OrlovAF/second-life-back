@@ -43,7 +43,14 @@ export const UpdateUserSchema = UserSchema.omit({
   updatedAt: true,
 }).partial();
 
+export const AvatarUploadSchema = z.object({
+  contentType: z.enum(['image/jpeg', 'image/jpg']),
+  contentLength: z.number().max(0.5 * 1024 * 1024),
+  checksum: z.string(),
+});
+
 export class UserDto extends createZodDto(UserSchema) {}
 export class UserResponseDto extends createZodDto(UserResponseSchema) {}
 export class CreateUserDto extends createZodDto(CreateUserSchema) {}
 export class UpdateUserDto extends createZodDto(UpdateUserSchema) {}
+export class AvatarUploadDto extends createZodDto(AvatarUploadSchema) {}

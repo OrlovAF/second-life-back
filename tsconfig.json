@@ -12,7 +12,8 @@
     "baseUrl": "./",
     "paths": {
       "@common/*": ["src/common/*"],
-      "@prisma/*": ["src/infrastructure/prisma/*"],
+      "@modules/*": ["src/modules/*"],
+      "@infrastructure/*": ["src/infrastructure/*"],
       "@generated/*": ["generated/*"]
     },
     "incremental": true,
