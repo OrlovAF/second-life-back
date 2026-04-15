@@ -1,4 +1,6 @@
 import { CustomZodValidationPipe } from '@common/pipes/zod-validation.pipe';
+import { CategoriesModule } from '@modules/categories/categories.module';
+import { ItemsModule } from '@modules/items/items.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_PIPE } from '@nestjs/core';
@@ -21,6 +23,8 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     UsersModule,
     RolesModule,
+    CategoriesModule,
+    ItemsModule,
   ],
   controllers: [],
   providers: [
