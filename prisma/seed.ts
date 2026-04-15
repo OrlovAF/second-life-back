@@ -10,6 +10,21 @@ async function main() {
     data: [{ name: 'USER' }],
     skipDuplicates: true,
   });
+
+  await prisma.category.createMany({
+    data: [
+      { name: 'Clothes', slug: 'clothes' },
+      { name: 'Books', slug: 'books' },
+      { name: 'Electronics', slug: 'electronics' },
+      { name: 'Furniture', slug: 'furniture' },
+      { name: 'Toys', slug: 'toys' },
+      { name: 'Sports', slug: 'sports' },
+      { name: 'Home decor', slug: 'home-decor' },
+      { name: 'Transport', slug: 'transport' },
+      { name: 'Other', slug: 'other' },
+    ],
+    skipDuplicates: true,
+  });
 }
 
 main().finally(() => prisma.$disconnect());

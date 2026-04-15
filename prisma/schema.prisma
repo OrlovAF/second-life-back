@@ -35,3 +35,11 @@ model Role {
 
   @@map("roles")
 }
+
+model Category {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  @@map("categories")
+}
