@@ -8,28 +8,29 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String   @map("password_hash")
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String @map("password_hash")
 
-  name          String?
-  avatar        String?
-  city          String?
-  bio           String?
-  phone         String?
+  name   String?
+  avatar String?
+  city   String?
+  bio    String?
+  phone  String?
 
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  roleId        String
-  role          Role     @relation(fields: [roleId], references: [id])
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+  items  Item[]
 
   @@map("users")
 }
 
 model Role {
-  id    String @id @default(cuid())
-  name  String @unique
+  id   String @id @default(cuid())
+  name String @unique
 
   users User[]
 
@@ -41,5 +42,74 @@ model Category {
   name String
   slug String @unique
 
+  items              Item[]
+  acceptedCategories AcceptedCategory[]
+
   @@map("categories")
+}
+
+enum ItemStatus {
+  ACTIVE
+  INACTIVE
+  MATCHED
+  ARCHIVED
+}
+
+enum ItemCondition {
+  NEW
+  LIKE_NEW
+  USED
+  BAD
+}
+
+model Item {
+  id String @id @default(uuid())
+
+  ownerId String @map("owner_id")
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String
+
+  categoryId String   @map("category_id")
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  condition ItemCondition
+  status    ItemStatus    @default(ACTIVE)
+
+  acceptAllCategories Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  images             ItemImage[]
+  acceptedCategories AcceptedCategory[]
+
+  @@map("items")
+}
+
+model ItemImage {
+  id String @id @default(uuid())
+
+  itemId String @map("item_id")
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  imageUrl String @map("image_url")
+  order    Int
+
+  @@unique([itemId, order])
+  @@map("item_images")
+}
+
+model AcceptedCategory {
+  id String @id @default(uuid())
+
+  itemId String @map("item_id")
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  categoryId String   @map("category_id")
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([itemId, categoryId])
+  @@map("accepted_categories")
 }
