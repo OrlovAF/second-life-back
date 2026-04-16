@@ -25,6 +25,13 @@ model User {
   role   Role   @relation(fields: [roleId], references: [id])
   items  Item[]
 
+  sentOffers     Offer[] @relation("SentOffers")
+  receivedOffers Offer[] @relation("ReceivedOffers")
+
+  ownedDeals Deal[]    @relation("DealItemOwner")
+  sentDeals  Deal[]    @relation("DealOfferSender")
+  messages   Message[] @relation("DealMessages")
+
   @@map("users")
 }
 
@@ -82,13 +89,15 @@ model Item {
   condition ItemCondition
   status    ItemStatus    @default(ACTIVE)
 
-  acceptedMode       ItemAcceptedMode       @default(ALL) @map("accepted_mode")
+  acceptedMode       ItemAcceptedMode   @default(ALL) @map("accepted_mode")
   acceptedCategories AcceptedCategory[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  images ItemImage[]
+  images     ItemImage[]
+  offers     Offer[]
+  offerItems OfferItem[]
 
   @@map("items")
 }
@@ -117,4 +126,93 @@ model AcceptedCategory {
 
   @@unique([itemId, categoryId])
   @@map("accepted_categories")
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+model Offer {
+  id String @id @default(cuid())
+
+  targetItemId String @map("target_item_id")
+  targetItem   Item   @relation(fields: [targetItemId], references: [id], onDelete: Cascade)
+
+  senderUserId String @map("sender_user_id")
+  senderUser   User   @relation("SentOffers", fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  receiverUserId String @map("receiver_user_id")
+  receiverUser   User   @relation("ReceivedOffers", fields: [receiverUserId], references: [id], onDelete: Cascade)
+
+  message String?
+
+  status OfferStatus @default(PENDING)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  offerItems OfferItem[]
+  deal       Deal?
+
+  @@map("offers")
+}
+
+model OfferItem {
+  id String @id @default(cuid())
+
+  offerId String @map("offer_id")
+  offer   Offer  @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  itemId String @map("item_id")
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([offerId, itemId])
+  @@map("offer_items")
+}
+
+enum DealStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Deal {
+  id String @id @default(cuid())
+
+  offerId String @unique @map("offer_id")
+  offer   Offer  @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  itemOwnerId String @map("item_owner_id")
+  itemOwner   User   @relation("DealItemOwner", fields: [itemOwnerId], references: [id], onDelete: Cascade)
+
+  offerSenderId String @map("offer_sender_id")
+  offerSender   User   @relation("DealOfferSender", fields: [offerSenderId], references: [id], onDelete: Cascade)
+
+  status DealStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages Message[]
+
+  @@map("deals")
+}
+
+model Message {
+  id String @id @default(cuid())
+
+  dealId String @map("deal_id")
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  senderId String @map("sender_id")
+  sender   User   @relation("DealMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  text String
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("messages")
 }
