@@ -1,6 +1,10 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { ItemCondition, ItemStatus } from '../../common/types';
+import {
+  ItemAcceptedMode,
+  ItemCondition,
+  ItemStatus,
+} from '../../common/types';
 
 export const ItemSchema = z.object({
   id: z.cuid(),
@@ -9,7 +13,7 @@ export const ItemSchema = z.object({
   categoryId: z.cuid(),
   condition: z.enum(ItemCondition),
   status: z.enum(ItemStatus).default(ItemStatus.ACTIVE),
-  acceptAllCategories: z.boolean().default(false),
+  acceptedMode: z.enum(ItemAcceptedMode).default(ItemAcceptedMode.ALL),
   ownerId: z.cuid(),
   owner: z.object({
     id: z.cuid(),
@@ -47,31 +51,33 @@ export const CreateItemSchema = z
     title: z.string().min(1, 'Title is required'),
     description: z.string().min(1, 'Description is required'),
     categoryId: z.cuid(),
-    condition: z.nativeEnum(ItemCondition),
+    condition: z.enum(ItemCondition),
     images: z
       .array(
         z.object({
-          url: z.string().url(),
+          url: z.url(),
           order: z.number(),
         }),
       )
       .default([]),
-    acceptAllCategories: z.boolean().default(false),
+    acceptedMode: z.enum(ItemAcceptedMode).default(ItemAcceptedMode.ALL),
     acceptedCategoryIds: z.array(z.cuid()).optional(),
   })
   .refine(
     (data) => {
-      // If acceptAllCategories is true, acceptedCategoryIds should not be provided
-      if (data.acceptAllCategories && data.acceptedCategoryIds?.length) {
-        return false;
-      }
-      // If acceptedCategoryIds is provided, it should not be empty
       if (
-        data.acceptedCategoryIds !== undefined &&
-        data.acceptedCategoryIds.length === 0
+        data.acceptedMode === ItemAcceptedMode.ALL &&
+        data.acceptedCategoryIds !== undefined
       ) {
         return false;
       }
+      if (
+        data.acceptedMode === ItemAcceptedMode.SELECTED &&
+        (!data.acceptedCategoryIds || data.acceptedCategoryIds.length === 0)
+      ) {
+        return false;
+      }
+
       return true;
     },
     {
@@ -95,29 +101,48 @@ export const UpdateItemSchema = z
         }),
       )
       .optional(),
-    acceptAllCategories: z.boolean().optional(),
+    acceptedMode: z.enum(ItemAcceptedMode).optional(),
     acceptedCategoryIds: z.array(z.cuid()).optional(),
   })
-  .refine(
-    (data) => {
-      // If acceptAllCategories is true, acceptedCategoryIds should not be provided
-      if (data.acceptAllCategories && data.acceptedCategoryIds?.length) {
-        return false;
-      }
-      // If acceptedCategoryIds is provided, it should not be empty
-      if (
-        data.acceptedCategoryIds !== undefined &&
-        data.acceptedCategoryIds.length === 0
-      ) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: 'Invalid categories configuration',
-      path: ['acceptedCategoryIds'],
-    },
-  );
+  .superRefine((data, ctx) => {
+    const modeProvided = data.acceptedMode !== undefined;
+    const categoriesProvided = data.acceptedCategoryIds !== undefined;
+
+    if (!modeProvided && !categoriesProvided) {
+      return;
+    }
+
+    if (data.acceptedMode === ItemAcceptedMode.ALL && categoriesProvided) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'ALL mode cannot have categories',
+        path: ['acceptedCategoryIds'],
+      });
+    }
+
+    if (
+      data.acceptedMode === ItemAcceptedMode.SELECTED &&
+      (!data.acceptedCategoryIds || data.acceptedCategoryIds.length === 0)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'SELECTED mode requires at least one category',
+        path: ['acceptedCategoryIds'],
+      });
+    }
+
+    if (
+      !modeProvided &&
+      categoriesProvided &&
+      data.acceptedCategoryIds!.length === 0
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Categories cannot be empty',
+        path: ['acceptedCategoryIds'],
+      });
+    }
+  });
 
 export class ItemDto extends createZodDto(ItemSchema) {}
 export class CreateItemDto extends createZodDto(CreateItemSchema) {}

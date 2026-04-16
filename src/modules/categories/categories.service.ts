@@ -1,5 +1,5 @@
 import { PrismaService } from '@infrastructure/prisma/prisma.service';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class CategoriesService {
@@ -19,10 +19,13 @@ export class CategoriesService {
     });
   }
 
-  async validateCategoryIds(ids: string[]): Promise<boolean> {
+  async validateCategoryIds(ids: string[]) {
     const count = await this.prisma.category.count({
       where: { id: { in: ids } },
     });
-    return count === ids.length;
+
+    if (count !== ids.length) {
+      throw new BadRequestException('Incorrect accepted categories');
+    }
   }
 }

@@ -16,6 +16,11 @@ export enum ItemCondition {
   BAD = 'BAD',
 }
 
+export enum ItemAcceptedMode {
+  ALL = 'ALL',
+  SELECTED = 'SELECTED',
+}
+
 export interface UserData {
   id: string;
   email: string;

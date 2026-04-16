@@ -62,6 +62,11 @@ enum ItemCondition {
   BAD
 }
 
+enum ItemAcceptedMode {
+  ALL
+  SELECTED
+}
+
 model Item {
   id String @id @default(uuid())
 
@@ -77,13 +82,13 @@ model Item {
   condition ItemCondition
   status    ItemStatus    @default(ACTIVE)
 
-  acceptAllCategories Boolean @default(false)
+  acceptedMode       ItemAcceptedMode       @default(ALL) @map("accepted_mode")
+  acceptedCategories AcceptedCategory[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  images             ItemImage[]
-  acceptedCategories AcceptedCategory[]
+  images ItemImage[]
 
   @@map("items")
 }

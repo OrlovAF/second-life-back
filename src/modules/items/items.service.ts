@@ -1,6 +1,8 @@
+import { ItemAcceptedMode } from '@common/types';
 import { PrismaService } from '@infrastructure/prisma/prisma.service';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -34,7 +36,9 @@ export class ItemsService {
       throw new NotFoundException('Category not found');
     }
 
-    await this.validateCategories(dto.acceptedCategoryIds);
+    if (dto.acceptedMode === ItemAcceptedMode.SELECTED) {
+      await this.categoriesService.validateCategoryIds(dto.acceptedCategoryIds);
+    }
 
     return this.prisma.item.create({
       data: {
@@ -44,16 +48,16 @@ export class ItemsService {
         categoryId: dto.categoryId,
         condition: dto.condition,
 
-        acceptAllCategories: dto.acceptAllCategories,
+        acceptedMode: dto.acceptedMode,
 
-        acceptedCategories: dto.acceptAllCategories
-          ? undefined
-          : {
-              create:
-                dto.acceptedCategoryIds?.map((id) => ({
+        acceptedCategories:
+          dto.acceptedMode === ItemAcceptedMode.SELECTED
+            ? {
+                create: dto.acceptedCategoryIds!.map((id) => ({
                   categoryId: id,
-                })) || [],
-            },
+                })),
+              }
+            : undefined,
 
         images: {
           create: dto.images.map(({ url, order }) => ({
@@ -69,7 +73,17 @@ export class ItemsService {
     });
   }
 
-  async update(id: string, dto: UpdateItemDto) {
+  async update(id: string, dto: UpdateItemDto, userId: string) {
+    const item = await this.findById(id);
+
+    if (!item) {
+      throw new NotFoundException('Item not found');
+    }
+
+    if (item.ownerId !== userId) {
+      throw new ForbiddenException('Not your item');
+    }
+
     if (dto.categoryId) {
       const category = await this.categoriesService.findById(dto.categoryId);
 
@@ -78,15 +92,24 @@ export class ItemsService {
       }
     }
 
-    await this.validateCategories(dto.acceptedCategoryIds);
+    const mode = dto.acceptedMode ?? item.acceptedMode;
 
-    let acceptAllCategories = dto.acceptAllCategories;
+    let categoryIds: string[] | undefined;
 
-    if (
-      dto.acceptAllCategories === undefined &&
-      dto.acceptedCategoryIds !== undefined
-    ) {
-      acceptAllCategories = false;
+    if (mode === ItemAcceptedMode.SELECTED) {
+      if (dto.acceptedCategoryIds !== undefined) {
+        categoryIds = dto.acceptedCategoryIds;
+      } else {
+        categoryIds = item.acceptedCategories.map((c) => c.categoryId);
+      }
+
+      if (!categoryIds.length) {
+        throw new BadRequestException(
+          'SELECTED mode requires at least one category',
+        );
+      }
+
+      await this.categoriesService.validateCategoryIds(categoryIds);
     }
 
     return this.prisma.item.update({
@@ -98,22 +121,21 @@ export class ItemsService {
         condition: dto.condition,
         status: dto.status,
 
-        acceptAllCategories,
+        acceptedMode: mode,
 
         acceptedCategories:
-          acceptAllCategories !== undefined
-            ? acceptAllCategories
+          mode === ItemAcceptedMode.ALL
+            ? {
+                deleteMany: {},
+              }
+            : dto.acceptedCategoryIds !== undefined
               ? {
                   deleteMany: {},
+                  create: dto.acceptedCategoryIds.map((id) => ({
+                    categoryId: id,
+                  })),
                 }
-              : {
-                  deleteMany: {},
-                  create:
-                    dto.acceptedCategoryIds?.map((id) => ({
-                      categoryId: id,
-                    })) || [],
-                }
-            : undefined,
+              : undefined,
 
         images: dto.images
           ? {
@@ -145,16 +167,5 @@ export class ItemsService {
       where: { id },
       data: { status: 'ARCHIVED' },
     });
-  }
-
-  private async validateCategories(categoryIds?: string[]) {
-    if (categoryIds?.length > 0) {
-      const valid =
-        await this.categoriesService.validateCategoryIds(categoryIds);
-
-      if (!valid) {
-        throw new BadRequestException('Incorrect accepted categories');
-      }
-    }
   }
 }
