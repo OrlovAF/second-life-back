@@ -1,11 +1,20 @@
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class S3Service {
   private client: S3Client;
+  private bucket = this.config.get<string>('s3.bucket');
 
   constructor(private readonly config: ConfigService) {
     this.client = new S3Client({
@@ -20,18 +29,20 @@ export class S3Service {
   }
 
   async createPresignedPutUrl(params: {
+    userId: string;
     key: string;
     contentType: string;
     checksum: string;
     expiresIn?: number;
   }) {
-    const bucket = this.config.get<string>('s3.bucket');
-
     const command = new PutObjectCommand({
-      Bucket: bucket,
+      Bucket: this.bucket,
       Key: params.key,
       ContentType: params.contentType,
       ChecksumSHA256: params.checksum,
+      Metadata: {
+        userid: params.userId,
+      },
     });
 
     const url = await getSignedUrl(this.client, command, {
@@ -39,5 +50,22 @@ export class S3Service {
     });
 
     return url;
+  }
+
+  async validateFile(key: string, userId: string) {
+    try {
+      const res = await this.client.send(
+        new HeadObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
+
+      if (res.Metadata?.userid !== userId) {
+        throw new ForbiddenException('Invalid file owner');
+      }
+    } catch {
+      throw new BadRequestException('File not found or invalid');
+    }
   }
 }

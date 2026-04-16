@@ -1,6 +1,7 @@
 import { PrismaService } from '@infrastructure/prisma/prisma.service';
 import { S3Service } from '@infrastructure/s3/s3.service';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import {
   AvatarUploadDto,
@@ -14,6 +15,7 @@ import { UserWhereUniqueInput } from './users.types';
 @Injectable()
 export class UsersService {
   constructor(
+    private configService: ConfigService,
     private prisma: PrismaService,
     private s3: S3Service,
   ) {}
@@ -62,6 +64,10 @@ export class UsersService {
   }
 
   async updateUser(id: string, data: UpdateUserDto) {
+    if (data.avatar) {
+      await this.s3.validateFile(data.avatar, id);
+    }
+
     const user = await this.prisma.user.update({
       where: { id },
       data,
@@ -72,22 +78,30 @@ export class UsersService {
   }
 
   async getAvatarUploadUrl(userId: string, data: AvatarUploadDto) {
-    const key = `${userId}/avatar.jpg`;
+    const key = `users/${userId}/avatar.jpg`;
 
     const uploadUrl = await this.s3.createPresignedPutUrl({
+      userId,
       key,
       contentType: data.contentType,
       checksum: data.checksum,
       expiresIn: 60,
     });
 
-    return { uploadUrl };
+    return { key, uploadUrl };
+  }
+
+  getAvatarUrl(key: string) {
+    return `${this.configService.get('s3.endpoint')}/${key}`;
   }
 
   private sanitize(user: UserDto): UserResponseDto {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...rest } = user;
+    const { passwordHash, avatar, ...rest } = user;
 
-    return rest;
+    return {
+      ...rest,
+      avatar: user.avatar ? this.getAvatarUrl(user.avatar) : null,
+    };
   }
 }
